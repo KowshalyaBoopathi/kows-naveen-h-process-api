@@ -1,32 +1,115 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc"
-	xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
-	<wsc:config name="Web_Service_Consumer_Config" doc:name="Web Service Consumer Config" doc:id="abfab5da-ba28-404d-8522-aa02b04c4cf3" >
-		<wsc:connection wsdlLocation="api\bookMyHotel.wsdl" service="Hotel" port="HotelSOAP" address="http://www.bookmyhotel.com/" />
-	</wsc:config>
-	<flow name="getFlights" doc:id="5df39e5e-e803-4092-af9e-e9c2cf2ec0f7" >
-		<ee:transform doc:name="Transform Message" doc:id="d034b985-dbb5-4f9c-9a9b-11a2e37d67ab" >
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<flow name="getHotels" doc:id="5df39e5e-e803-4092-af9e-e9c2cf2ec0f7" >
+		<db:select doc:name="Select" doc:id="de8cdd99-20ef-43b8-99c9-d46f3e9351fd" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from hotels]]></db:sql>
+		</db:select>
+		<logger level="INFO" doc:name="Logger" doc:id="1efdb7f6-0b7e-4829-b42f-28be588dd6ec" message="Flow Ended"/>
+	</flow>
+	<flow name="postHotel" doc:id="85dce012-851b-4f93-9ab9-2db22125b7e1" >
+		<ee:transform doc:name="Transform Message" doc:id="1c4190b0-be8c-4fe6-8780-d9b7902d0a6d" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
-output application/java
+output application/json
+ns hot http://www.bookmyhotel.com/Hotel/
 ---
 {
+hotelName: payload.body.hot#PostHotel.Hotel.HotelName,
+rating: payload.body.hot#PostHotel.Hotel.rating,
+address: payload.body.hot#PostHotel.Hotel.address,
+rooms: payload.body.hot#PostHotel.Hotel.rooms,
+paymentType: payload.body.hot#PostHotel.Hotel.paymentType,
+amenities: payload.body.hot#PostHotel.Hotel.amenities,
+food: payload.body.hot#PostHotel.Hotel.food
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<wsc:consume doc:name="Consume" doc:id="c65b8384-796a-494f-aebe-3550b777458c" config-ref="Web_Service_Consumer_Config"/>
-		<ee:transform doc:name="Transform Message" doc:id="3860c5f1-333c-4458-9244-2d75d201f638" >
+		<db:insert doc:name="Insert" doc:id="f8babfee-98c8-426d-808e-b445dfe271ac" config-ref="Database_Config">
+			<db:sql ><![CDATA[INSERT INTO hotels 
+(hotelName, rating, address, rooms, paymentTypes, amenities, food)
+VALUES (:hotelName,:rating,:address,:rooms,:paymentType,:amenities,:food);
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	hotelName: payload.hotelName,
+	rating: payload.rating,
+	address: payload.address,
+	rooms: payload.rooms,
+	paymentType: payload.paymentType,
+	amenities: payload.amenities,
+	food: payload.food
+}]]]></db:input-parameters>
+		</db:insert>
+	</flow>
+	<flow name="getHotelsById" doc:id="bb184f49-9d3f-4900-ac9b-7f63a9ff7ade" >
+		<ee:transform doc:name="Transform Message" doc:id="6843117d-1172-4ea9-bdf1-ff65b962befc" >
 			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/java
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="hotelId" ><![CDATA[%dw 2.0
+output application/json
+ns hot http://www.bookmyhotel.com/Hotel/
+---
+payload.body.hot#GetHotelById.HotelId as Number]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<db:select doc:name="Select" doc:id="29415e97-c467-4f1c-9cba-00402bd73948" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from hotels where hotelId= :hotelId]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	hotelId: vars.hotelId
+}]]]></db:input-parameters>
+		</db:select>
+	</flow>
+	<flow name="updateHotelsById" doc:id="9576a4bb-509d-402a-a9a5-4404a41d14b0" >
+		<ee:transform doc:name="Transform Message" doc:id="69dd3d3c-7b8a-4ad6-b06f-e4c272943a4b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[output application/json
+ns soap http://schemas.xmlsoap.org/soap/envelope/
+ns hot http://www.bookmyhotel.com/Hotel/
 ---
 {
+    hotelId: payload.body.hot#UpdateHotelById.PatchHotelBody.HotelId,
+hotelName: payload.body.hot#UpdateHotelById.PatchHotelBody.HotelName,
+rating: payload.body.hot#UpdateHotelById.PatchHotelBody.rating,
+address: payload.body.hot#UpdateHotelById.PatchHotelBody.address
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+		<db:update doc:name="Update" doc:id="2d356552-83e9-40e7-8362-40ba56f889bf" config-ref="Database_Config">
+			<db:sql ><![CDATA[update hotels set hotelName= :name,rating= :rate,address= :add where hotelId= :id
+
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: payload.hotelId,
+	name: payload.hotelName,
+	add: payload.address,
+	rate: payload.rating
+}]]]></db:input-parameters>
+		</db:update>
+	</flow>
+	<flow name="deleteHotelsById" doc:id="2cf52d01-3c6b-49f1-9035-e0e931e649b4" >
+		<ee:transform doc:name="Transform Message" doc:id="02f0b4ba-dda0-4bed-8639-292e7199b9d5" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="hotelId" ><![CDATA[%dw 2.0
+output application/json
+ns hot http://www.bookmyhotel.com/Hotel/
+---
+payload.body.hot#DeleteHotelById.HotelId as Number]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<db:delete doc:name="Delete" doc:id="f8cd24e5-08b3-4015-a672-41bda90336da" config-ref="Database_Config">
+			<db:sql ><![CDATA[delete from hotels where hotelId= :hotelId
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	hotelId : vars.hotelId
+}]]]></db:input-parameters>
+		</db:delete>
 	</flow>
 </mule>

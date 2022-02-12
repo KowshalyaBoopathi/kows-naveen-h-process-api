@@ -119,7 +119,8 @@ ns soap http://schemas.xmlsoap.org/soap/envelope
         </ee:transform>
     </flow>
     <flow name="GetBookings:\soapkit-config">
-        <ee:transform>
+        <flow-ref doc:name="Flow Reference" doc:id="fa61b679-4c15-46f6-b40e-14fd6f62e515" name="getBookings"/>
+		<ee:transform>
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/java
@@ -128,7 +129,7 @@ ns soap http://schemas.xmlsoap.org/soap/envelope
 {
     body: {
     	result: {
-    		Hotels: payload
+    		Bookings: payload
  }
     } write "application/xml"
 }]]>
@@ -137,25 +138,11 @@ ns soap http://schemas.xmlsoap.org/soap/envelope
         </ee:transform>
     </flow>
     <flow name="PostBooking:\soapkit-config">
-        <ee:transform>
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/java
-ns soap http://schemas.xmlsoap.org/soap/envelope
----
-{
-    body: {
-    	result: {
-    		Hotels: payload
- }
-    } write "application/xml"
-}]]>
-                </ee:set-payload>
-            </ee:message>
-        </ee:transform>
+        <flow-ref doc:name="Flow Reference" doc:id="eacb0453-df14-4651-92bf-b16dd356c66c" name="postBookings"/>
     </flow>
     <flow name="GetBookingById:\soapkit-config">
-        <ee:transform>
+        <flow-ref doc:name="Flow Reference" doc:id="10b9ad97-9319-4904-8f9c-489a24d0d160" name="getBookingsById"/>
+		<ee:transform>
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/java
@@ -164,7 +151,7 @@ ns soap http://schemas.xmlsoap.org/soap/envelope
 {
     body: {
     	result: {
-    		Hotels: payload
+    		Bookings: payload
  }
     } write "application/xml"
 }]]>
@@ -173,7 +160,8 @@ ns soap http://schemas.xmlsoap.org/soap/envelope
         </ee:transform>
     </flow>
     <flow name="UpdateBookingById:\soapkit-config">
-        <ee:transform>
+        <flow-ref doc:name="Flow Reference" doc:id="e9d76f86-7c68-46e9-bd0a-30bd09efbece" name="updateBookingById"/>
+		<ee:transform>
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/java
@@ -182,7 +170,7 @@ ns soap http://schemas.xmlsoap.org/soap/envelope
 {
     body: {
     	result: {
-    		Hotels: payload
+    		Message: "Your booking has been updated Successfully."
  }
     } write "application/xml"
 }]]>
@@ -191,7 +179,8 @@ ns soap http://schemas.xmlsoap.org/soap/envelope
         </ee:transform>
     </flow>
     <flow name="DeleteBookingById:\soapkit-config">
-        <ee:transform>
+        <flow-ref doc:name="Flow Reference" doc:id="8132b24e-dd5e-4122-a118-e275a9b396f5" name="deleteBookingById"/>
+		<ee:transform>
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/java
@@ -200,7 +189,7 @@ ns soap http://schemas.xmlsoap.org/soap/envelope
 {
     body: {
     	result: {
-    		Hotels: payload
+    		Message: "Your booking has been cancelled Successfully."
  }
     } write "application/xml"
 }]]>

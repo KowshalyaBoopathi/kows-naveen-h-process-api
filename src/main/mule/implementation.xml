@@ -112,4 +112,126 @@ payload.body.hot#DeleteHotelById.HotelId as Number]]></ee:set-variable>
 }]]]></db:input-parameters>
 		</db:delete>
 	</flow>
+	<flow name="getBookings" doc:id="0e8b14de-c5e9-4cd1-bf75-8d92e936faed" >
+		<db:select doc:name="Select" doc:id="a6383a16-0817-48f7-837f-a4f585f64ac9" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from bookings]]></db:sql>
+		</db:select>
+		<logger level="INFO" doc:name="Logger" doc:id="37e17f0a-0736-45d5-864e-0b5278ea0f01" message="Flow Ended"/>
+	</flow>
+	<flow name="postBookings" doc:id="d89aa23e-3644-4be9-995e-4ae27766bd28" >
+		<ee:transform doc:name="Transform Message" doc:id="fed4da84-5a49-4b32-bf58-18072434b818" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="id" ><![CDATA[%dw 2.0
+output application/json
+ns hot http://www.bookmyhotel.com/Hotel/
+---
+{
+    startDate: payload.body.hot#PostBooking.booking.startDate,
+    endDate: payload.body.hot#PostBooking.booking.endDate,
+    amenities: payload.body.hot#PostBooking.booking.amenities,
+    food: payload.body.hot#PostBooking.booking.food,
+    room: payload.body.hot#PostBooking.booking.room,
+    hotelName: payload.body.hot#PostBooking.booking.hotelName,
+    location: payload.body.hot#PostBooking.booking.location
+    }]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<db:select doc:name="Select" doc:id="9b870187-d782-497f-9613-e51ab04f51e6" config-ref="Database_Config">
+			<db:sql ><![CDATA[select hotelId from hotels where hotelName= :hotelName and address= :location]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="b7de480c-32d4-4bda-a5fd-df03b882df12" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+ns soap http://schemas.xmlsoap.org/soap/envelope
+---
+{
+    body: {
+    	result: {
+    		"Message": "Your Booking is successful."
+ }
+    } write "application/xml"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="implementationFlow" doc:id="2086d583-b0ba-44ac-8dcd-32cb26e17ad6" >
+		<db:insert doc:name="Insert" doc:id="52282f2d-c687-424e-8292-b04e4f02dc1f" config-ref="Database_Config">
+			<db:sql><![CDATA[INSERT INTO bookings 
+(bookingStartDate, bookingEndDate, amenitiesSelected, food, room, hotelId)
+VALUES (:startDate,:endDate,:amenities,:food,:room);
+
+]]></db:sql>
+		</db:insert>
+	</flow>
+	<flow name="getBookingsById" doc:id="319ca1e2-c531-4640-9a87-51d652aa87a6" >
+		<ee:transform doc:name="Transform Message" doc:id="9082e754-072f-4496-bd65-091198bf5a68" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="bookingId" ><![CDATA[%dw 2.0
+output application/json
+ns hot http://www.bookmyhotel.com/Hotel/
+---
+payload.body.hot#GetBookingById.bookingId as Number]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<db:select doc:name="Select" doc:id="c9efd4c6-dc86-43c9-9599-4a660de32f49" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from bookings where bookingId= :bookingId
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	bookingId: vars.bookingId
+}]]]></db:input-parameters>
+		</db:select>
+	</flow>
+	<flow name="updateBookingById" doc:id="552a06a9-29d2-4fc1-bde6-7887fa19bccb" >
+		<ee:transform doc:name="Transform Message" doc:id="960ef0f6-068e-4247-9e29-c3521dd34609" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[output application/json
+ns soap http://schemas.xmlsoap.org/soap/envelope/
+ns hot http://www.bookmyhotel.com/Hotel/
+---
+{
+    id: payload.body.hot#UpdateBookingById.bookingPatch.bookingId,
+    sdate: payload.body.hot#UpdateBookingById.bookingPatch.startDate,
+    edate: payload.body.hot#UpdateBookingById.bookingPatch.endDate,
+    food: payload.body.hot#UpdateBookingById.bookingPatch.food,
+    room: payload.body.hot#UpdateBookingById.bookingPatch.room
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<db:update doc:name="Update" doc:id="939b8354-4728-4834-856f-6cedc6c96852" config-ref="Database_Config">
+			<db:sql ><![CDATA[
+update bookings set bookingStartDate= :sdate, bookingEndDate= :edate, food= :food, room= :room where bookingID= :id
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: payload.id,
+	sdate: payload.sdate,
+	edate: payload.edate,
+	food: payload.food,
+	room: payload.room
+}]]]></db:input-parameters>
+		</db:update>
+	</flow>
+	<flow name="deleteBookingById" doc:id="c24b8f8c-8273-482a-8ecd-e6bdb93721c2" >
+		<ee:transform doc:name="Transform Message" doc:id="2b00cc12-e2b7-4ea2-92f1-d37993092fc7" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="bookingId" ><![CDATA[%dw 2.0
+output application/java
+ns hot http://www.bookmyhotel.com/Hotel/
+---
+payload.body.hot#DeleteBookingById.bookingId as Number]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<db:delete doc:name="Delete" doc:id="7b807cca-6b7a-4221-814b-11b2eff0956d" config-ref="Database_Config">
+			<db:sql ><![CDATA[delete from bookings where bookingID= :bookingId]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	bookingId: vars.bookingId
+}]]]></db:input-parameters>
+		</db:delete>
+	</flow>
 </mule>

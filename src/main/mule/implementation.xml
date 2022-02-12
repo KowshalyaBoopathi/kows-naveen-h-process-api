@@ -139,11 +139,55 @@ ns hot http://www.bookmyhotel.com/Hotel/
 			</ee:variables>
 		</ee:transform>
 		<db:select doc:name="Select" doc:id="9b870187-d782-497f-9613-e51ab04f51e6" config-ref="Database_Config">
-			<db:sql ><![CDATA[select hotelId from hotels where hotelName= :hotelName and address= :location]]></db:sql>
+			<db:sql ><![CDATA[select hotelId from hotels where hotelName= :hotelName and address= :location
+
+
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	hotelName: vars.id.hotelName,
+	location: vars.id.location
+}]]]></db:input-parameters>
 		</db:select>
-		<ee:transform doc:name="Transform Message" doc:id="b7de480c-32d4-4bda-a5fd-df03b882df12" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+		<set-variable value="#[payload[0].hotelId]" doc:name="Set Variable" doc:id="a595e654-a865-4fd3-843c-b24e97460d27" variableName="isempty"/>
+		<choice doc:name="Choice" doc:id="e1292c15-12c6-48ec-ae38-2335a4702684" >
+			<when expression="#[vars.isempty == null]">
+				<ee:transform doc:name="Transform Message" doc:id="f6efceaa-04b4-4f79-80ab-bfaa47b283d3" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+ns soap http://schemas.xmlsoap.org/soap/envelope
+---
+{
+    body: {
+    	result: {
+    		"Message": "OOPS! It seems hotels are not available for "
+    		++ vars.id.location as String ++ " location"
+ }
+    } write "application/xml"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<db:insert doc:name="Insert" doc:id="52282f2d-c687-424e-8292-b04e4f02dc1f" config-ref="Database_Config">
+			<db:sql><![CDATA[INSERT INTO bookings 
+(bookingStartDate, bookingEndDate, amenitiesSelected, food, room, hotelId)
+VALUES (:startDate,:endDate,:amenities,:food,:room,:hotelId)
+
+]]></db:sql>
+					<db:input-parameters ><![CDATA[#[{
+	
+    startDate: vars.id.startDate,
+    endDate: vars.id.endDate,
+    amenities: vars.id.amenities,
+    food: vars.id.food,
+    room: vars.id.room,
+    hotelId: vars.isempty
+}]]]></db:input-parameters>
+		</db:insert>
+				<ee:transform doc:name="Transform Message" doc:id="b7de480c-32d4-4bda-a5fd-df03b882df12">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/java
 ns soap http://schemas.xmlsoap.org/soap/envelope
 ---
@@ -156,15 +200,8 @@ ns soap http://schemas.xmlsoap.org/soap/envelope
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-	</flow>
-	<flow name="implementationFlow" doc:id="2086d583-b0ba-44ac-8dcd-32cb26e17ad6" >
-		<db:insert doc:name="Insert" doc:id="52282f2d-c687-424e-8292-b04e4f02dc1f" config-ref="Database_Config">
-			<db:sql><![CDATA[INSERT INTO bookings 
-(bookingStartDate, bookingEndDate, amenitiesSelected, food, room, hotelId)
-VALUES (:startDate,:endDate,:amenities,:food,:room);
-
-]]></db:sql>
-		</db:insert>
+			</otherwise>
+		</choice>
 	</flow>
 	<flow name="getBookingsById" doc:id="319ca1e2-c531-4640-9a87-51d652aa87a6" >
 		<ee:transform doc:name="Transform Message" doc:id="9082e754-072f-4496-bd65-091198bf5a68" >
